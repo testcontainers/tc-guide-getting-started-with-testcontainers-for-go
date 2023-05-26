@@ -110,7 +110,7 @@ connecting to that database.
 
 In real applications we might use some database migration tool, but for this guide let us use a simple script to initialize our database.
 
-Create a `testdata/init-user-db.sh` file to create CUSTOMERS table and insert the sample data as follows:
+Create a `testdata/init-db.sh` file to create CUSTOMERS table and insert the sample data as follows:
 
 [source,shellscript]
 ----
@@ -150,7 +150,9 @@ the same Postgres Docker container for all the tests in that file/package.
 We can use Go's special https://pkg.go.dev/testing#hdr-Main[TestMain(m *testing.M)] function from testing package to implement common setup
 and teardown steps.
 
-First, let us extract `PostgresContainer` creation logic into a separate file called `main_test.go` as follows:
+First, let us extract `PostgresContainer` creation logic into a separate file called `main_test.go`.
+Then we will add `TestMain(m *testing.M)` function to start the Postgres database container
+and initialize `customerRepository` as follows:
 
 [source,go]
 ----
@@ -160,7 +162,7 @@ include::{codebase}/main_test.go[]
 We have created a `PostgresContainer` struct as a wrapper to hold the actual postgres container,
 a callback function to remove the container and `ConnectionString` obtained from the started container.
 
-Now create `customer_repository_test.go` file and write multiple tests using the same container as follows:
+Now create `customer_repository_test.go` file and write multiple tests which will be using the same container as follows:
 
 [source,go]
 ----
