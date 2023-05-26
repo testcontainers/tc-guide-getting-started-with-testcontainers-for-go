@@ -17,7 +17,7 @@ func TestCustomerRepository(t *testing.T) {
 
 	container, err := postgres.RunContainer(ctx,
 		testcontainers.WithImage("postgres:15.2-alpine"),
-		postgres.WithInitScripts(filepath.Join("testdata", "init-user-db.sh")),
+		postgres.WithInitScripts(filepath.Join("testdata", "init-db.sh")),
 		postgres.WithDatabase("test-db"),
 		postgres.WithUsername("postgres"),
 		postgres.WithPassword("postgres"),
@@ -36,7 +36,9 @@ func TestCustomerRepository(t *testing.T) {
 	connStr, err := container.ConnectionString(ctx, "sslmode=disable")
 	assert.NoError(t, err)
 
-	customerRepo := NewCustomerRepository(ctx, connStr)
+	customerRepo, err := NewCustomerRepository(ctx, connStr)
+	assert.NoError(t, err)
+
 	c, err := customerRepo.CreateCustomer(ctx, Customer{
 		Name:  "Henry",
 		Email: "henry@gmail.com",

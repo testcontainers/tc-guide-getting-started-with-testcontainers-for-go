@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/jackc/pgx/v5"
@@ -13,15 +12,15 @@ type CustomerRepository struct {
 	conn *pgx.Conn
 }
 
-func NewCustomerRepository(ctx context.Context, connStr string) *CustomerRepository {
+func NewCustomerRepository(ctx context.Context, connStr string) (*CustomerRepository, error) {
 	conn, err := pgx.Connect(ctx, connStr)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
-		log.Fatal(err)
+		return nil, err
 	}
 	return &CustomerRepository{
 		conn: conn,
-	}
+	}, nil
 }
 
 func (r CustomerRepository) CreateCustomer(ctx context.Context, customer Customer) (Customer, error) {

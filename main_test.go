@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/testcontainers/testcontainers-go"
+
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
@@ -23,7 +24,7 @@ type PostgresContainer struct {
 func SetupPostgres(ctx context.Context) (*PostgresContainer, error) {
 	container, err := postgres.RunContainer(ctx,
 		testcontainers.WithImage("postgres:15.2-alpine"),
-		postgres.WithInitScripts(filepath.Join("testdata", "init-user-db.sh")),
+		postgres.WithInitScripts(filepath.Join("testdata", "init-db.sh")),
 		postgres.WithDatabase("test-db"),
 		postgres.WithUsername("postgres"),
 		postgres.WithPassword("postgres"),
@@ -55,7 +56,10 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatalf("failed to setup Postgres container")
 	}
-	customerRepository = NewCustomerRepository(ctx, pgContainer.ConnectionString)
+	customerRepository, err = NewCustomerRepository(ctx, pgContainer.ConnectionString)
+	if err != nil {
+		log.Fatalf("failed to initialize customerRepository")
+	}
 	defer pgContainer.CloseFn()
 
 	os.Exit(m.Run())
