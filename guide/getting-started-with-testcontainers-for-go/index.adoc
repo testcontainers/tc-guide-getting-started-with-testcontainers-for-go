@@ -7,7 +7,6 @@ repo: https://github.com/testcontainers/tc-guide-getting-started-with-testcontai
 languages:
   - Go
 tags:
-  - go
   - postgresql
 ---
 :toc:
