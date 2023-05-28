@@ -125,11 +125,11 @@ instance.
 For example, PostgresContainer provides `WithImage()`, `WithDatabase()`, `WithUsername()`, `WithPassword()` etc functions
 to set various properties of Postgres containers easily.
 
-Now, create the `customer_repository_test.go` file and implement the test as follows:
+Now, create the `customer_repo_test.go` file and implement the test as follows:
 
 [source,go]
 ----
-include::{codebase}/customer_repository_test.go[]
+include::{codebase}/customer_repo_test.go[]
 ----
 
 Let's understand what is going on here:
