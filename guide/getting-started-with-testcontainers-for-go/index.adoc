@@ -159,8 +159,7 @@ and initialize `customerRepository` as follows:
 include::{codebase}/main_test.go[]
 ----
 
-We have created a `PostgresContainer` struct as a wrapper to hold the actual postgres container,
-a callback function to remove the container and `ConnectionString` obtained from the started container.
+We have created a `PostgresContainer` struct as a wrapper to hold the actual postgres container and `ConnectionString` obtained from the started container.
 
 Now create `customer_repository_test.go` file and write multiple tests which will be using the same container as follows:
 
