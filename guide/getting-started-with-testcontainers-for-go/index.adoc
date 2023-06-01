@@ -173,7 +173,7 @@ then we have implemented separate tests for CreateCustomer and GetCustomerByEmai
 
 [TIP]
 For the purpose of this guide, we are not resetting the data in the database.
-But it is a good practice to rest the database in a known state before running any test.
+But it is a good practice to reset the database in a known state before running any test.
 
 == Run tests
 
