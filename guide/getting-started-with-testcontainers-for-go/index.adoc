@@ -224,7 +224,9 @@ ok  	github.com/testcontainers/testcontainers-go-demo/customer	6.177s
 ?   	github.com/testcontainers/testcontainers-go-demo/testhelpers	[no test files]
 ----
 
-You should see the Postgres docker container is automatically started and all tests should PASS.
+You should see two Postgres docker containers automatically started:
+one for the suite and its two tests, and the other for the initial test we created,
+and all those tests should PASS.
 You can also notice that after tests are executed, the containers are stopped and removed automatically.
 
 == Summary
