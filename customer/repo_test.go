@@ -1,4 +1,4 @@
-package main
+package customer
 
 import (
 	"context"
@@ -15,28 +15,30 @@ import (
 func TestCustomerRepository(t *testing.T) {
 	ctx := context.Background()
 
-	container, err := postgres.RunContainer(ctx,
-		testcontainers.WithImage("postgres:15.2-alpine"),
-		postgres.WithInitScripts(filepath.Join("testdata", "init-db.sh")),
+	pgContainer, err := postgres.RunContainer(ctx,
+		testcontainers.WithImage("postgres:15.3-alpine"),
+		postgres.WithInitScripts(filepath.Join("..", "testdata", "init-db.sql")),
 		postgres.WithDatabase("test-db"),
 		postgres.WithUsername("postgres"),
 		postgres.WithPassword("postgres"),
-		testcontainers.WithWaitStrategy(wait.ForLog("database system is ready to accept connections").WithOccurrence(2).WithStartupTimeout(5*time.Second)),
+		testcontainers.WithWaitStrategy(
+			wait.ForLog("database system is ready to accept connections").
+				WithOccurrence(2).WithStartupTimeout(5*time.Second)),
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	t.Cleanup(func() {
-		if err := container.Terminate(ctx); err != nil {
-			t.Fatalf("failed to terminate container: %s", err)
+		if err := pgContainer.Terminate(ctx); err != nil {
+			t.Fatalf("failed to terminate pgContainer: %s", err)
 		}
 	})
 
-	connStr, err := container.ConnectionString(ctx, "sslmode=disable")
+	connStr, err := pgContainer.ConnectionString(ctx, "sslmode=disable")
 	assert.NoError(t, err)
 
-	customerRepo, err := NewCustomerRepository(ctx, connStr)
+	customerRepo, err := NewRepository(ctx, connStr)
 	assert.NoError(t, err)
 
 	c, err := customerRepo.CreateCustomer(ctx, Customer{

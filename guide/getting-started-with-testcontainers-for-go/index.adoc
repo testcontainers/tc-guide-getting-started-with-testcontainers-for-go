@@ -15,8 +15,8 @@ tags:
 
 In this guide, you will learn how to
 
-* Create a Go application with modules support
-* Implement CustomerRepository to manage customers data in PostgreSQL database using pgx driver
+* Create a Go application with modules support.
+* Implement a Repository to manage customers data in PostgreSQL database using pgx driver.
 * Test the database interactions using testcontainers-go.
 
 == Prerequisites
@@ -29,7 +29,7 @@ We are going to create a Go project and implement a Repository to save and retri
 from a PostgreSQL database. Then we will test this repository using the testcontainers-go postgres module.
 
 == Getting Started
-Let’s start with creating a Go project.
+Let's start with creating a Go project.
 
 [source,shell]
 ----
@@ -41,7 +41,7 @@ $ go mod init github.com/testcontainers/testcontainers-go-demo
 We are going to use the https://github.com/jackc/pgx[jackc/pgx] PostgreSQL Driver to interact with the Postgres database
 and the *testcontainers-go* https://golang.testcontainers.org/modules/postgres/[postgres module]
 to spin up a Postgres docker instance for testing.
-Also, we are going to use https://github.com/stretchr/testify[testify] for assertions.
+Also, we are going to use https://github.com/stretchr/testify[testify] for running multiple tests as a suite and for writing assertions.
 
 [NOTE]
 If you are new to Testcontainers, then please visit https://testcontainers.com/getting-started/[Testcontainers Getting Started] page
@@ -79,141 +79,143 @@ require (
 
 == Create Customer struct
 
-First, let us start with creating a types.go file and
-define the Customer struct to model the customer details as follows:
+First, let us start with creating a `types.go` file in `customer` package and
+define the `Customer` struct to model the customer details as follows:
 
 [source,go]
 ----
-include::{codebase}/types.go[]
+include::{codebase}/customer/types.go[]
 ----
 
-== Create CustomerRepository
-Next, create a `customer_repo.go` file, define the `CustomerRepository` struct and then
+== Create Repository
+Next, create `customer/repo.go` file, define the `Repository` struct and then
 add methods to create a new customer and get a customer by email as follows:
 
 [source,go]
 ----
-include::{codebase}/customer_repo.go[]
+include::{codebase}/customer/repo.go[]
 ----
 
 Let's understand what is going on here:
 
-* We have defined a `CustomerRepository` struct with a field of type `*pgc.Conn` which will be used for performing database operations.
-* We have defined a helper function `NewCustomerRepository(connStr)` that takes a database connection string and initializes `CustomerRepository`.
-* Then we have implemented `CreateCustomer()` and `GetCustomerByEmail()` methods on the `CustomerRepository` receiver.
+* We have defined a `Repository` struct with a field of type `*pgc.Conn` which will be used for performing database operations.
+* We have defined a helper function `NewRepository(connStr)` that takes a database connection string and initializes `Repository`.
+* Then we have implemented `CreateCustomer()` and `GetCustomerByEmail()` methods on the `Repository` receiver.
 
-== Write a Repository test using testcontainers-go
+== Write test for Repository using testcontainers-go
 
-We have our `CustomerRepository` implementation ready, but for testing we need a PostgreSQL database.
+We have our `Repository` implementation ready, but for testing we need a PostgreSQL database.
 We can use *testcontainers-go* to spin up a Postgres database in a Docker container and run our tests
 connecting to that database.
 
 In real applications we might use some database migration tool, but for this guide let us use a simple script to initialize our database.
 
-Create a `testdata/init-db.sh` file to create CUSTOMERS table and insert the sample data as follows:
+Create a `testdata/init-db.sql` file to create CUSTOMERS table and insert the sample data as follows:
 
-[source,shellscript]
+[source,sql]
 ----
-include::{codebase}/testdata/init-db.sh[]
+include::{codebase}/testdata/init-db.sql[]
 ----
 
-The testcontainers-go library provides the generic *Container* abstraction that can be used to run
+The *testcontainers-go* library provides the generic *Container* abstraction that can be used to run
 any containerised service. To further simplify, testcontainers-go provides technology specific modules
-that will reduce the boilerplate and also provides a functional options pattern to easily construct the container
-instance.
+that will reduce the boilerplate and also provides a functional options pattern to easily construct
+the container instance.
 
 For example, PostgresContainer provides `WithImage()`, `WithDatabase()`, `WithUsername()`, `WithPassword()` etc functions
 to set various properties of Postgres containers easily.
 
-Now, create the `customer_repo_test.go` file and implement the test as follows:
+Now, let's create the `customer/repo_test.go` file and implement the test as follows:
 
 [source,go]
 ----
-include::{codebase}/customer_repo_test.go[]
+include::{codebase}/customer/repo_test.go[]
 ----
 
 Let's understand what is going on here:
 
-* We have created an instance of `PostgresContainer` by specifying the Docker image `postgres:15.2-alpine`, from which the container needs to be created.
+* We have created an instance of `PostgresContainer` by specifying the Docker image `postgres:15.3-alpine`, from which the container needs to be created.
 * We have configured the initialization scripts using `WithInitScripts(...)` so that after the database starts, the CUSTOMERS table will be created and sample data will be inserted.
-* Next, we specified the username, password and database name for the Postgres container.
+* Next, we have specified the username, password and database name for the Postgres container.
 * We have configured the `WaitStrategy` that will help to determine whether the Postgres container is fully ready to use or not.
 * Then, we have defined the test cleanup function using `t.Cleanup(...)` so that at the end of the test the Postgres container will be removed.
-* Next, we obtained the database `ConnectionString` from `PostgresContainer` and initialized `CustomerRepository`.
+* Next, we obtained the database `ConnectionString` from `PostgresContainer` and initialized `Repository`.
 * Then, we have created a new customer with the email `henry@gmail.com` and verified that a customer with the email `henry@gmail.com` exists in our database.
 
-== Reusing the containers for multiple tests
+== Reusing the containers and running multiple tests as a suite
+
 In the previous section, we saw how to spin up a Postgres Docker container for a single test.
-But usually we might have multiple tests in a single file/package and we may want to reuse
-the same Postgres Docker container for all the tests in that file/package.
+But usually we might have multiple tests in a single file, and we may want to reuse
+the same Postgres Docker container for all the tests in that file.
 
-We can use Go's special https://pkg.go.dev/testing#hdr-Main[TestMain(m *testing.M)] function from testing package to implement common setup
-and teardown steps.
+We can use https://pkg.go.dev/github.com/stretchr/testify/suite[testify suite] package to implement
+common test setup and teardown actions.
 
-First, let us extract `PostgresContainer` creation logic into a separate file called `main_test.go`.
-Then we will add `TestMain(m *testing.M)` function to start the Postgres database container
-and initialize `customerRepository` as follows:
+First, let us extract `PostgresContainer` creation logic into a separate file called `testhelpers/containers.go`.
+In `containers.go`, we have defined `PostgresContainer` struct which extends testcontainers-go `PostgresContainer` struct
+to provide easy access to `ConnectionString` and created `CreatePostgresContainer()` function
+to instantiate `PostgresContainer`.
 
-[source,go]
-----
-include::{codebase}/main_test.go[]
-----
-
-We have created a `PostgresContainer` struct as a wrapper to hold the actual postgres container,
-a callback function to remove the container and `ConnectionString` obtained from the started container.
-
-Now create `customer_repository_test.go` file and write multiple tests which will be using the same container as follows:
+Now, let's create `customer/repo_suite_test.go` file and implement tests for creating a new customer and
+getting customer by email by using testify suite package as follows:
 
 [source,go]
 ----
-include::{codebase}/customer_repository_test.go[]
+include::{codebase}/customer/repo_suite_test.go[]
 ----
 
-We have created the `PostgresContainer` in `TestMain(...)` and initialized the `customerRepository` and
-then we have implemented separate tests for CreateCustomer and GetCustomerByEmail scenarios.
+Let's understand what is going on here:
+
+* We have created `CustomerRepoTestSuite` by extending `suite.Suite` struct and added fields which will be used across multiple tests in that suite.
+* In the `SetupSuite()` function which will be executed only once before executing the tests, we have created `PostgresContainer` and initialized `Repository`.
+* In `TearDownSuite()` function which will be executed only once after all the tests in that suite are executed, we are terminating the container which will destroy the Postgres Docker container.
+* Next, we have created the tests `TestCreateCustomer()` and `TestGetCustomerByEmail()` as receiver functions on the suite.
+* Finally, we have created the test function `TestCustomerRepoTestSuite(t *testing.T)` which will run the test suite when we execute the tests using `go test`.
 
 [TIP]
 For the purpose of this guide, we are not resetting the data in the database.
-But it is a good practice to rest the database in a known state before running any test.
+But it is a good practice to reset the database in a known state before running any test.
 
 == Run tests
 
-You can run all the tests using `go test ./...` and optionally add "-v" flag for displaying verbose output.
+You can run all the tests using `go test ./...` and optionally add the flag "-v" for displaying verbose output.
 
 [source,shell]
 ----
 $ go test -v ./...
 
-2023/05/26 12:07:24 github.com/testcontainers/testcontainers-go - Connected to docker:
-  Server Version: 70+testcontainerscloud
-  API Version: 1.41
-  Operating System: Ubuntu 20.04 LTS
-  Total Memory: 7407 MB
-2023/05/26 12:07:24 🐳 Creating container for image docker.io/testcontainers/ryuk:0.4.0
-2023/05/26 12:07:24 ✅ Container created: 77cc67015dd4
-2023/05/26 12:07:24 🐳 Starting container: 77cc67015dd4
-2023/05/26 12:07:25 🚧 Waiting for container id 77cc67015dd4 image: docker.io/testcontainers/ryuk:0.4.0
-2023/05/26 12:07:25 ✅ Container started: 77cc67015dd4
-2023/05/26 12:07:26 🐳 Creating container for image postgres:15.2-alpine
-2023/05/26 12:07:26 ✅ Container created: 0bd1046a7ac2
-2023/05/26 12:07:26 🐳 Starting container: 0bd1046a7ac2
-2023/05/26 12:07:26 🚧 Waiting for container id 0bd1046a7ac2 image: postgres:15.2-alpine
-2023/05/26 12:07:28 ✅ Container started: 0bd1046a7ac2
+=== RUN   TestCustomerRepoTestSuite
+...
+...
+2023/06/13 09:27:11 🐳 Creating container for image docker.io/testcontainers/ryuk:0.4.0
+2023/06/13 09:27:11 ✅ Container created: 2881f4e311a2
+2023/06/13 09:27:11 🐳 Starting container: 2881f4e311a2
+2023/06/13 09:27:12 🚧 Waiting for container id 2881f4e311a2 image: docker.io/testcontainers/ryuk:0.4.0
+2023/06/13 09:27:12 ✅ Container started: 2881f4e311a2
+2023/06/13 09:27:12 🐳 Creating container for image postgres:15.3-alpine
+2023/06/13 09:27:12 ✅ Container created: a98029633d02
+2023/06/13 09:27:12 🐳 Starting container: a98029633d02
+2023/06/13 09:27:13 🚧 Waiting for container id a98029633d02 image: postgres:15.3-alpine
+2023/06/13 09:27:14 ✅ Container started: a98029633d02
+=== RUN   TestCustomerRepoTestSuite/TestCreateCustomer
+=== RUN   TestCustomerRepoTestSuite/TestGetCustomerByEmail
+2023/06/13 09:27:14 🐳 Terminating container: a98029633d02
+2023/06/13 09:27:15 🚫 Container terminated: a98029633d02
+--- PASS: TestCustomerRepoTestSuite (3.66s)
+    --- PASS: TestCustomerRepoTestSuite/TestCreateCustomer (0.00s)
+    --- PASS: TestCustomerRepoTestSuite/TestGetCustomerByEmail (0.00s)
 === RUN   TestCustomerRepository
-2023/05/26 12:07:29 🐳 Creating container for image postgres:15.2-alpine
-2023/05/26 12:07:29 ✅ Container created: 7a13f7a16bdc
-2023/05/26 12:07:29 🐳 Starting container: 7a13f7a16bdc
-2023/05/26 12:07:30 🚧 Waiting for container id 7a13f7a16bdc image: postgres:15.2-alpine
-2023/05/26 12:07:31 ✅ Container started: 7a13f7a16bdc
-2023/05/26 12:07:31 🐳 Terminating container: 7a13f7a16bdc
-2023/05/26 12:07:32 🚫 Container terminated: 7a13f7a16bdc
---- PASS: TestCustomerRepository (3.04s)
-=== RUN   TestCreateCustomer
---- PASS: TestCreateCustomer (0.16s)
-=== RUN   TestGetCustomerByEmail
---- PASS: TestGetCustomerByEmail (0.72s)
+2023/06/13 09:27:15 🐳 Creating container for image postgres:15.3-alpine
+2023/06/13 09:27:15 ✅ Container created: fcf4241a61ab
+2023/06/13 09:27:15 🐳 Starting container: fcf4241a61ab
+2023/06/13 09:27:15 🚧 Waiting for container id fcf4241a61ab image: postgres:15.3-alpine
+2023/06/13 09:27:16 ✅ Container started: fcf4241a61ab
+2023/06/13 09:27:16 🐳 Terminating container: fcf4241a61ab
+2023/06/13 09:27:17 🚫 Container terminated: fcf4241a61ab
+--- PASS: TestCustomerRepository (1.94s)
 PASS
-ok  	github.com/testcontainers/testcontainers-go-demo	9.673s
+ok  	github.com/testcontainers/testcontainers-go-demo/customer	6.177s
+?   	github.com/testcontainers/testcontainers-go-demo/testhelpers	[no test files]
 ----
 
 You should see the Postgres docker container is automatically started and all tests should PASS.
