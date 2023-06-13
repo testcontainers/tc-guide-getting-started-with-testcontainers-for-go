@@ -152,6 +152,12 @@ We can use https://pkg.go.dev/github.com/stretchr/testify/suite[testify suite] p
 common test setup and teardown actions.
 
 First, let us extract `PostgresContainer` creation logic into a separate file called `testhelpers/containers.go`.
+
+[source,go]
+----
+include::{codebase}/testhelpers/containers.go[]
+----
+
 In `containers.go`, we have defined `PostgresContainer` struct which extends testcontainers-go `PostgresContainer` struct
 to provide easy access to `ConnectionString` and created `CreatePostgresContainer()` function
 to instantiate `PostgresContainer`.
